@@ -172,25 +172,39 @@
 #set list(spacing: 0.9em, indent: 0.6em, marker: ([•], [–], [·]))
 #set enum(spacing: 0.9em, indent: 0.6em)
 
-// -------------------------------------------------------------- Title block
-// Render a title block when either frontmatter or a leading '#' provided one.
+// -------------------------------------------------------------- Title page
+// A dedicated cover page when frontmatter or a leading '#' supplied a title.
+// Vertically centered, no header/footer (suppressed by `page() >= 2` rules).
 #if has-title-block [
-  #v(0.4cm)
-  #text(size: 26pt, weight: "bold", fill: navy)[#doc-title]
-  #v(0.3em)
-  #if doc-subtitle != none [
-    #text(size: 14pt, fill: mid-navy)[#doc-subtitle]
-    #v(0.3em)
+  #v(1fr)
+  #align(center)[
+    #text(size: 36pt, weight: "bold", fill: navy)[#doc-title]
+
+    #v(0.6em)
+
+    #if doc-subtitle != none [
+      #text(size: 16pt, fill: mid-navy, style: "italic")[#doc-subtitle]
+      #v(0.8em)
+    ]
+
+    #line(length: 30%, stroke: 2pt + gold)
+
+    #v(1.5em)
+
+    #if doc-author != none [
+      #text(12pt, weight: "semibold", fill: dark-gray)[#doc-author]
+      #v(0.4em)
+    ]
+
+    #text(10pt, fill: dark-gray)[#doc-date.display("[month repr:long] [day], [year]")]
+
+    #if fm-version != none [
+      #v(0.4em)
+      #text(10pt, fill: dark-gray)[Version #fm-version]
+    ]
   ]
-  #if doc-author != none or fm-version != none [
-    #set text(10pt, fill: dark-gray)
-    #if doc-author != none [#doc-author]
-    #if doc-author != none and fm-version != none [ · ]
-    #if fm-version != none [v#fm-version]
-    #v(0.3em)
-  ]
-  #line(length: 100%, stroke: 2pt + gold)
-  #v(0.8cm)
+  #v(1fr)
+  #pagebreak()
 ]
 
 // -------------------------------------------------------- Table of contents
