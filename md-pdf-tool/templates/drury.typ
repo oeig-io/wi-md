@@ -1,5 +1,5 @@
-// Drury brand template for md-pdf
-// Navy/orange/gold palette: navy (#283D75), orange (#DC5A26), gold (#D5B161)
+// Drury Roofing brand template for md-pdf
+// Colors: navy (#283D75), orange (#DC5A26), gold (#D5B161)
 // Available fonts: Lato, DejaVu Sans, DejaVu Sans Mono, DejaVu Serif, Libertinus Serif
 
 #import "@preview/cmarker:0.1.8"
@@ -28,9 +28,39 @@
   else { f }
 }
 
+// ---- Read the markdown and extract a leading '# Title' line if present ----
+// Convention: single H1 = document title; all sections use H2+.
+// If the first non-blank, non-frontmatter line is '# Foo', treat it as title.
+#let raw-content = read(filepath)
+
+#let _extract-leading-h1(text) = {
+  let lines = text.split("\n")
+  let i = 0
+  // skip leading blank lines
+  while i < lines.len() and lines.at(i).trim() == "" { i = i + 1 }
+  if i < lines.len() {
+    let line = lines.at(i)
+    if line.starts-with("# ") and not line.starts-with("## ") {
+      let title = line.slice(2).trim()
+      let rest = lines.slice(i + 1).join("\n")
+      return (title: title, body: rest)
+    }
+  }
+  return (title: none, body: text)
+}
+
+#let _extracted   = _extract-leading-h1(raw-content)
+#let inline-title = _extracted.title
+#let body-content = _extracted.body
+
 #let doc-author   = if fm-author   != none { fm-author   } else { none }
-#let doc-title    = if fm-title    != none { fm-title    } else { filename }
+#let doc-title    = {
+  if fm-title != none { fm-title }
+  else if inline-title != none { inline-title }
+  else { filename }
+}
 #let doc-subtitle = if fm-subtitle != none { fm-subtitle } else { none }
+#let has-title-block = has-frontmatter or inline-title != none
 #let doc-date = if fm-date != none {
   let p = fm-date.split("-")
   if p.len() == 3 { datetime(year: int(p.at(0)), month: int(p.at(1)), day: int(p.at(2))) }
@@ -92,13 +122,21 @@
   font: "Lato",
   fallback: true,
   lang: language,
-  size: 10pt,
+  size: 10.5pt,
   fill: dark-gray,
 )
 
+// Paragraph spacing & line height
+#set par(
+  leading: 0.75em,      // line-height within a paragraph
+  spacing: 1.1em,       // space between paragraphs / blocks
+  justify: false,
+)
+
 // ------------------------------------------------------------------- Headings
-#show heading: set block(above: 1.4em, below: 0.6em)
-#set heading(numbering: "1.1")
+#show heading: set block(above: 1.8em, below: 0.9em)
+// No auto-numbering: narrative documents read better without 1.1 / 1.2 prefixes.
+#set heading(numbering: none)
 
 // H1 — navy, bold
 #show heading.where(level: 1): set text(size: 20pt, weight: "bold", fill: navy)
@@ -131,18 +169,17 @@
 )
 
 // ------------------------------------------------------------------- Lists
-#set list(spacing: 0.5em)
-#set enum(spacing: 0.5em)
+#set list(spacing: 0.9em, indent: 0.6em, marker: ([•], [–], [·]))
+#set enum(spacing: 0.9em, indent: 0.6em)
 
-// -------------------------------------------------------------- Front matter
-#if has-frontmatter [
-  #if fm-title != none [
-    #v(1cm)
-    #text(size: 24pt, weight: "bold", fill: navy)[#fm-title]
-    #v(0.3em)
-  ]
-  #if fm-subtitle != none [
-    #text(size: 14pt, fill: mid-navy)[#fm-subtitle]
+// -------------------------------------------------------------- Title block
+// Render a title block when either frontmatter or a leading '#' provided one.
+#if has-title-block [
+  #v(0.4cm)
+  #text(size: 26pt, weight: "bold", fill: navy)[#doc-title]
+  #v(0.3em)
+  #if doc-subtitle != none [
+    #text(size: 14pt, fill: mid-navy)[#doc-subtitle]
     #v(0.3em)
   ]
   #if doc-author != none or fm-version != none [
@@ -153,7 +190,7 @@
     #v(0.3em)
   ]
   #line(length: 100%, stroke: 2pt + gold)
-  #v(1cm)
+  #v(0.8cm)
 ]
 
 // -------------------------------------------------------- Table of contents
@@ -163,8 +200,9 @@
 ]
 
 // --------------------------------------------------------- Render markdown
+// Render the body (with any leading '# Title' already stripped into title block).
 #cmarker.render(
-  read(filepath),
+  body-content,
   scope: (image: (path, alt: none) => image(path, alt: alt)),
   math: mitex,
 )
