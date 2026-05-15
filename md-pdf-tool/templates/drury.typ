@@ -33,6 +33,9 @@
 // If the first non-blank, non-frontmatter line is '# Foo', treat it as title.
 #let raw-content = read(filepath)
 
+// Extracts the leading H1 plus any content that lives between it and the first H2.
+// That "preamble" (byline, draft note, purpose paragraph, etc.) is moved onto the
+// title page so the body starts cleanly at the first '## Section'.
 #let _extract-leading-h1(text) = {
   let lines = text.split("\n")
   let i = 0
@@ -42,16 +45,21 @@
     let line = lines.at(i)
     if line.starts-with("# ") and not line.starts-with("## ") {
       let title = line.slice(2).trim()
-      let rest = lines.slice(i + 1).join("\n")
-      return (title: title, body: rest)
+      // Walk forward until the first H2 (## ) — that becomes the body boundary.
+      let j = i + 1
+      while j < lines.len() and not lines.at(j).starts-with("## ") { j = j + 1 }
+      let preamble = lines.slice(i + 1, j).join("\n").trim()
+      let rest = lines.slice(j).join("\n")
+      return (title: title, preamble: preamble, body: rest)
     }
   }
-  return (title: none, body: text)
+  return (title: none, preamble: "", body: text)
 }
 
-#let _extracted   = _extract-leading-h1(raw-content)
-#let inline-title = _extracted.title
-#let body-content = _extracted.body
+#let _extracted      = _extract-leading-h1(raw-content)
+#let inline-title    = _extracted.title
+#let inline-preamble = _extracted.preamble
+#let body-content    = _extracted.body
 
 #let doc-author   = if fm-author   != none { fm-author   } else { none }
 #let doc-title    = {
@@ -175,6 +183,12 @@
 // -------------------------------------------------------------- Title page
 // A dedicated cover page when frontmatter or a leading '#' supplied a title.
 // Vertically centered, no header/footer (suppressed by `page() >= 2` rules).
+// Renders, in order:
+//   1. Title
+//   2. Optional subtitle (from frontmatter)
+//   3. Gold rule
+//   4. Inline-preamble (everything between `# Title` and first `## Section`),
+//      OR author/date/version metadata if no preamble was present.
 #if has-title-block [
   #v(1fr)
   #align(center)[
@@ -189,18 +203,30 @@
 
     #line(length: 30%, stroke: 2pt + gold)
 
-    #v(1.5em)
+    #v(1.2em)
 
-    #if doc-author != none [
-      #text(12pt, weight: "semibold", fill: dark-gray)[#doc-author]
-      #v(0.4em)
-    ]
-
-    #text(10pt, fill: dark-gray)[#doc-date.display("[month repr:long] [day], [year]")]
-
-    #if fm-version != none [
-      #v(0.4em)
-      #text(10pt, fill: dark-gray)[Version #fm-version]
+    #if inline-preamble != "" [
+      // Render the markdown preamble through cmarker, centered.
+      #set align(center)
+      #set par(justify: false, leading: 0.7em, spacing: 0.9em)
+      #set text(size: 11pt, fill: dark-gray)
+      #block(width: 75%)[
+        #cmarker.render(
+          inline-preamble,
+          scope: (image: (path, alt: none) => image(path, alt: alt)),
+          math: mitex,
+        )
+      ]
+    ] else [
+      #if doc-author != none [
+        #text(12pt, weight: "semibold", fill: dark-gray)[#doc-author]
+        #v(0.4em)
+      ]
+      #text(10pt, fill: dark-gray)[#doc-date.display("[month repr:long] [day], [year]")]
+      #if fm-version != none [
+        #v(0.4em)
+        #text(10pt, fill: dark-gray)[Version #fm-version]
+      ]
     ]
   ]
   #v(1fr)
