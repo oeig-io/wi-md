@@ -113,6 +113,36 @@ Key settings:
 - `default_toc` — whether to generate a table of contents by default
 - `default_author` — author metadata embedded in the PDF
 
+## Markdown Authoring Conventions
+
+The templates in this skill follow the dominant markdown / HTML convention:
+
+- **One `#` heading per document** — used as the document title (cover / title page)
+- **All section headings start at `##`** — second-level headings are the top-level sections of the body
+- **Optional preamble** — any content between the `# Title` and the first `## Section` is treated as title-page material (byline, draft note, purpose paragraph, etc.) by templates that support it (e.g. `drury`)
+
+Example structure:
+
+```markdown
+# The Spirit of the Agreement     ← becomes the title-page heading
+
+**Don Baker × Bearly Operating**  ← preamble (byline)
+
+*Draft — May 15, 2026*            ← preamble (draft note)
+
+## In one sentence                ← first body section
+
+Don brings 75 years of Drury...
+
+## What Don brings
+
+- ...
+```
+
+This matches the rule enforced by `markdownlint` MD025 ("single-title-h1"), Google's markdown style guide, and most static site generators (Hugo, Jekyll, Docusaurus). It is also what screen readers expect for accessible documents.
+
+> 💡 The boundary between title-page content and body content is **the first `##` heading**. Move it earlier to put less on the cover; move it later to put more on the cover.
+
 ## YAML Front Matter
 
 Markdown files can include YAML front matter for metadata that flows into the PDF:
@@ -130,7 +160,11 @@ tags: roofing, texas, procurement
 
 Supported fields: `title`, `subtitle`, `author`, `date`, `version`, `tags`, `logo`, `participants`.
 
-When front matter is present, the template renders a title block on the first page. When absent, the filename is used as the document title.
+**Precedence** for the document title (in templates that support both):
+
+1. YAML `title:` field (if present)
+2. Leading `#` heading in the markdown body (if present)
+3. Filename (fallback)
 
 ## Custom Templates
 
@@ -138,9 +172,32 @@ Custom templates are typst `.typ` files placed in `~/.config/md-pdf/templates/`.
 
 ### Installing a custom template
 
+Two options:
+
+**Option A — Copy (simple, one-way):**
+
 ```bash
 cp templates/drury.typ ~/.config/md-pdf/templates/drury.typ
 md-pdf input.md --template drury
+```
+
+Edits made to `~/.config/md-pdf/templates/drury.typ` will not flow back to the repo. Use this for templates you don't plan to modify.
+
+**Option B — Symlink (recommended for in-repo development):**
+
+```bash
+ln -s /absolute/path/to/repo/wi-md/md-pdf-tool/templates/drury.typ \
+      ~/.config/md-pdf/templates/drury.typ
+md-pdf input.md --template drury
+```
+
+Now `~/.config/md-pdf/templates/drury.typ` resolves to the repo file. Edits made through either path land in the same file and are versioned in the repo automatically.
+
+Verify the symlink:
+
+```bash
+ls -la ~/.config/md-pdf/templates/drury.typ
+# lrwxrwxrwx ... drury.typ -> /home/.../wi-md/md-pdf-tool/templates/drury.typ
 ```
 
 ### Writing custom templates
